@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulário de NPS</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: auto; 
+            background-color: #FFF;
+            color: #000;
+        }
+
+        h2 {
+            text-align: center;
+            color: #F09C75;
+        }
+
+        label {
+            font-weight: bold;
+            color: #000;
+        }
+
+        input, select, textarea, button { 
+            display: block; 
+            width: 100%; 
+            margin-top: 10px; 
+            padding: 8px;
+            border: 1px solid #F09C75;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #F09C75;
+            color: #FFF;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #E07C56;
+        }
+
+        .campo-fechado { 
+            display: none; 
+        }
+
+        .campo-aberto {
+            display: block;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        p {
+            margin-top: 5px;
+        }
+        .nota-container {
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+    }
+
+    /* Estilo padrão dos botões */
+    .nota-button {
+        width: 40px;
+        height: 40px;
+        border: none;
+        background-color: #F09C75; /* Cor padrão */
+        color: black; /* Texto preto */
+        text-align: center;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.2s;
+        border-radius: 5px;
+    }
+
+    /* Quando o botão for selecionado */
+    .nota-button.selected {
+        background-color: black; /* Fundo preto */
+        color: white; /* Texto branco */
+    }
+
+    /* Efeito hover opcional */
+    .nota-button:hover {
+        opacity: 0.8;
+    }
+    </style>
+</head>
+<body>
+    <h2>Formulário de Pesquisa de Satisfação (NPS)</h2>
+
+    <form id="formNPS">
+        <label for="codigoLoja">1º Qual o código da loja?</label>
+        <input type="text" id="codigoLoja" maxlength="3" required>
+
+        <button type="button" id="botaoBuscar" onclick="buscarVendedoras()">Buscar Vendedoras</button>
+
+        <div id="camposAdicionais" class="campo-fechado">
+            <label for="nomeVendedora">2º Nome da vendedora</label>
+            <select id="nomeVendedora" required>
+                <option value="" disabled selected>Selecione uma vendedora</option>
+            </select>
+
+            <label for="cpf">3º Digite seu CPF</label>
+            <input type="text" id="cpf" maxlength="11" required>
+
+            <label for="operacao">4º Qual operação efetuada?</label>
+            <select id="operacao" required>
+                <option value="" disabled selected>Selecione uma operação</option>
+                <option value="Venda">Venda</option>
+                <option value="Devolução/Troca">Devolução/Troca</option>
+                <option value="Assistência Técnica">Assistência Técnica</option>
+            </select>
+            <label for="notaAtendimento">5º Nota do atendimento</label>
+            <div class="nota-container" id="notaContainer"></div>
+            <p>Nota selecionada: <span id="notaValor">Nenhuma</span></p>
+            <input type="hidden" id="notaAtendimento">
+
+
+
+            <label for="comentarios">6º Comentários</label>
+            <textarea id="comentarios" maxlength="200" placeholder="Limite de 200 caracteres" required></textarea>
+
+            <button type="submit">Enviar</button>
+        </div>
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const container = document.getElementById("notaContainer");
+    const notaValor = document.getElementById("notaValor");
+
+    for (let i = 0; i <= 10; i++) {
+        let button = document.createElement("button");
+        button.textContent = i;
+        button.classList.add("nota-button");
+        button.dataset.value = i;
+
+        button.addEventListener("click", function() {
+    // Remover seleção anterior
+    document.querySelectorAll(".nota-button").forEach(btn => btn.classList.remove("selected"));
+    // Marcar botão atual como selecionado
+    this.classList.add("selected");
+    // Atualizar o texto com a nota selecionada
+    notaValor.textContent = this.dataset.value;
+    // Atualizar o campo oculto com a nota selecionada
+    document.getElementById("notaAtendimento").value = this.dataset.value;
+});
+
+        container.appendChild(button);
+    }
+        async function buscarVendedoras() {
+            const codigoLoja = document.getElementById("codigoLoja").value;
+
+            if (codigoLoja.length === 3) {
+                try {
+                    const url = `https://prod-28.brazilsouth.logic.azure.com/workflows/96108e6c86844cee8174c32b67ecd09b/triggers/manual/paths/invoke/loja/${codigoLoja}?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Rdd38ent0_mko2luGmWjIj5zue_cQ8tdSxutG0IMm_o`;
+                    
+                    const response = await axios.post(url);
+                    const selectVendedora = document.getElementById("nomeVendedora");
+                    selectVendedora.innerHTML = '<option value="" disabled selected>Selecione uma vendedora</option>';
+                    
+                    response.data.ResultSets.Table1.forEach(vendedora => {
+                        const option = document.createElement("option");
+                        option.value = vendedora.vendedora_nome.trim();
+                        option.textContent = vendedora.vendedora_nome.trim();
+                        selectVendedora.appendChild(option);
+                    });
+
+                    document.getElementById("botaoBuscar").style.display = "none";
+                    document.getElementById("camposAdicionais").classList.add("campo-aberto");
+                } catch (error) {
+                    console.error("Erro ao buscar vendedoras:", error);
+                    alert("Erro ao buscar vendedoras.");
+                }
+            } else {
+                alert("Por favor, insira um código de loja válido.");
+            }
+        }
+
+        function GravarDados(event) {
+    event.preventDefault();
+    const payload = {
+        Loja: document.getElementById("codigoLoja").value,
+        Vendedora: document.getElementById("nomeVendedora").value,
+        CPF: document.getElementById("cpf").value,
+        Operacao: document.getElementById("operacao").value,
+        Nota: notaValor.textContent,  // Use a variável correta para a nota
+        Comentario: document.getElementById("comentarios").value
+    };
+
+    axios.post('https://prod-16.brazilsouth.logic.azure.com:443/workflows/249c845518dd422d82fd53a239decd12/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=aEetLnmZAXzKqwtYFkbecaB-zY-isQz0PRHTkmn3ia0', payload)
+        .then(response => {
+            console.log("Resposta do servidor:", response);
+            alert("Formulário enviado com sucesso!");
+        })
+        .catch(error => {
+            console.error("Erro ao enviar o formulário:", error);
+            alert("Erro ao enviar os dados. Tente novamente.");
+        });
+}
+
+
+        document.getElementById("formNPS").addEventListener("submit", GravarDados);
+    </script>
+</body>
+</html>
